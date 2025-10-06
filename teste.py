@@ -1,1 +1,1 @@
-print ("oi mundo")
+print "oi mundo"
