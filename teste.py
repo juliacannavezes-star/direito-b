@@ -1,8 +1,8 @@
 import streamlit as st
 
-st.title("Meu Programa")
-st.write("oi mundo")
+st.title("Meu APP - Aula do Josir")
+st.write("Olá! Esse é o meu app do streamlit")
 
-nome = st.text_input("Digite seu nome:")
+nome = st.text_input ("Digite seu nome:")
 if nome:
   st.write(nome.upper())
