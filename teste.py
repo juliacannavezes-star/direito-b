@@ -1,7 +1,7 @@
 import streamlit as st
 
 st.title("🌟 Meu APP Interativo - Aula Josir ⚖️")
-st.markdown("## Boas-vindas ao App da Josir!")
+st.markdown("## Boas-vindas ao APP")
 st.write("Olá! Esse é o meu primeiro app Streamlit!")
 
 nome = st.text_input("**Digite seu nome completo:**")
