@@ -4,7 +4,7 @@ st.title("🌟 Meu APP Interativo - Aula Josir ⚖️")
 st.markdown("## Boas-vindas ao APP")
 st.write("Olá! Esse é o meu primeiro app Streamlit!")
 
-nome = st.text_input("**Digite seu nome completo:**")
+nome = st.text_input("Digite seu nome completo:")
 
 if nome:
     st.success(f"**Olá, {nome.split()[0].title()}!** Seu nome tem **{len(nome)}** caracteres.")
@@ -39,6 +39,6 @@ if nome:
             st.balloons()
             st.subheader("🎉 Parabéns pela sua criatividade!")
         else:
-            st.snow() 
+            st.warning() 
         
             
