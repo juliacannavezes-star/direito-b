@@ -39,6 +39,6 @@ if nome:
             st.balloons()
             st.subheader("🎉 Parabéns pela sua criatividade!")
         else:
-            st.warning() 
+            st.snow() 
         
             
