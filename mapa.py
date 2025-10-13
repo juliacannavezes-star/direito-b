@@ -1,11 +1,8 @@
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-
 st.title("Visualização de Países no Mapa")
 url = "https://www.irdx.com.br/media/uploads/paises.csv"
 dataset = pd.read_csv(url)
-st.subheader("📄 Dados dos países")
+st.subheader(" Dados dos países")
 st.dataframe(dataset)
 
 st.subheader("Coordenadas dos países no mapa")
