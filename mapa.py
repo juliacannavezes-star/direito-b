@@ -1,11 +1,21 @@
 import streamlit as st
-st.title("Visualização de Países no Mapa")
+import pandas as pd
+import plotly.express as px
+
+# Título do app
+st.title("Visualização de Países no Mapa 🌍")
+
+# Carregamento do dataset
 url = "https://www.irdx.com.br/media/uploads/paises.csv"
 dataset = pd.read_csv(url)
-st.subheader(" Dados dos países")
+
+# Exibição da tabela de dados
+st.subheader("📄 Dados dos países")
 st.dataframe(dataset)
 
-st.subheader("Coordenadas dos países no mapa")
+# Gráfico de dispersão geográfica (Scatter Geo)
+st.subheader("🗺️ Coordenadas dos países no mapa (Scatter Geo)")
+
 fig1 = px.scatter_geo(
     dataset,
     lat=dataset.latitude,
@@ -19,7 +29,8 @@ fig1.update_layout(
 )
 st.plotly_chart(fig1)
 
-st.subheader("Mapa Coroplético dos países")
+# Gráfico coroplético (Choropleth Map)
+st.subheader("🌐 Mapa Coroplético dos países")
 
 fig2 = px.choropleth(
     dataset,
