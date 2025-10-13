@@ -1,4 +1,4 @@
-import plotly.express as px
+
 import pandas as pd
 import streamlit as st
 st.title("Visualização de Países no Mapa")
