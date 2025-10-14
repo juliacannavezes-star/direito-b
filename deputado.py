@@ -18,8 +18,6 @@ def main():
         st.error(f"Não foi possível carregar os dados: {e}")
         return
 
-    st.write("Dados carregados (primeiras linhas):")
-    st.dataframe(df.head())
 
     # Exemplo de gráfico: número de deputados por estado
     if "uf" in df.columns:
