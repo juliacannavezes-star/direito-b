@@ -1,13 +1,4 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-
-# Título do app
-st.title("📊 Análise Interativa - Deputados 2022")
-
-# Carregar os dados
-@st.cache_data
-def carregar_dados():
+media/uploads/deputados_2022.csv
     return pd.read_csv("media/uploads/deputados_2022.csv")
 
 df = carregar_dados()
