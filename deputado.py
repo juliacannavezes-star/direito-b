@@ -2,42 +2,71 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Título
-st.title("Votação da PEC da Blindagem - Deputados 2022")
+# --- CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(page_title="Deputados 2022", layout="wide")
 
-# Carregar os dados
+# --- TÍTULO ---
+st.title("📊 Análise Interativa dos Deputados Federais 2022")
+
+# --- CARREGAMENTO DOS DADOS ---
 @st.cache_data
-def load_data():
-    df = pd.read_csv("media/uploads/deputados_2022.csv")
+def carregar_dados():
+    df = pd.read_csv("media/uploads/deputados_2022.csv", sep=",", encoding="utf-8")
     return df
 
-df = load_data()
+df = carregar_dados()
 
-# Mostrar os primeiros dados para referência
-st.subheader("Prévia dos dados")
+st.subheader("Visualização inicial dos dados")
 st.dataframe(df.head())
 
-# Verificar os nomes das colunas disponíveis
-st.subheader("Colunas disponíveis")
-st.write(df.columns)
+# --- FILTROS INTERATIVOS ---
+st.sidebar.header("🔍 Filtros")
 
-# Filtrar votos a favor
-if 'voto' in df.columns:
-    votos_favor = df[df['voto'].str.lower() == 'a favor']
+partidos = st.sidebar.multiselect(
+    "Selecione o(s) Partido(s):", 
+    options=sorted(df["partido"].dropna().unique()),
+    default=[]
+)
 
-    # Contagem total
-    total_favor = len(votos_favor)
+estados = st.sidebar.multiselect(
+    "Selecione o(s) Estado(s):",
+    options=sorted(df["estado"].dropna().unique()),
+    default=[]
+)
 
-    st.subheader("Total de votos a favor:")
-    st.metric(label="Deputados que votaram a favor", value=total_favor)
+# --- APLICAÇÃO DOS FILTROS ---
+df_filtrado = df.copy()
 
-    # Agrupar por partido (ou outro critério)
-    votos_por_partido = votos_favor['partido'].value_counts()
+if partidos:
+    df_filtrado = df_filtrado[df_filtrado["partido"].isin(partidos)]
 
-    # Gráfico
-    st.subheader("Votos a favor por partido")
-    st.bar_chart(votos_por_partido)
+if estados:
+    df_filtrado = df_filtrado[df_filtrado["estado"].isin(estados)]
 
-else:
-    st.error("Coluna 'voto' não encontrada no CSV. Verifique o nome correto.")
+st.write(f"Mostrando **{len(df_filtrado)}** deputados após filtragem.")
+st.dataframe(df_filtrado)
 
+# --- GRÁFICOS ---
+st.subheader("📈 Gráficos Interativos")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.write("### Distribuição por Partido")
+    fig1, ax1 = plt.subplots()
+    df_filtrado["partido"].value_counts().plot(kind="bar", ax=ax1)
+    ax1.set_xlabel("Partido")
+    ax1.set_ylabel("Número de Deputados")
+    st.pyplot(fig1)
+
+with col2:
+    st.write("### Distribuição por Estado")
+    fig2, ax2 = plt.subplots()
+    df_filtrado["estado"].value_counts().plot(kind="bar", ax=ax2, color="orange")
+    ax2.set_xlabel("Estado")
+    ax2.set_ylabel("Número de Deputados")
+    st.pyplot(fig2)
+
+# --- INFORMAÇÕES ADICIONAIS ---
+st.markdown("---")
+st.caption("Desenvolvido com ❤️ usando Streamlit e Pandas.")
