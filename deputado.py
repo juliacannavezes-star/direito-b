@@ -2,43 +2,45 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 
-@st.cache_data
 def load_data(url: str) -> pd.DataFrame:
     df = pd.read_csv(url)
     return df
 
 def main():
-    st.title("Visualização de Deputados 2022")
+    st.title("Deputados por Partido (2022)")
 
-    csv_url = "https://www.irdx.com.br/media/uploads/deputados_2022.csv"
-    try:
-        df = load_data(csv_url)
+    url = "https://www.irdx.com.br/media/uploads/deputados_2022.csv"
+    df = load_data(url)
 
+    st.write("Dados originais (primeiras linhas):")
+    st.dataframe(df.head())
+
+
+    coluna_partido = "Partido"
+    if coluna_partido not in df.columns:
+        st.error(f"Coluna '{coluna_partido}' não encontrada no dataset.")
         return
-    if "uf" in df.columns:
-        st.subheader("Número de deputados por estado (UF)")
-        contagem = df["uf"].value_counts().reset_index()
-        contagem.columns = ["uf", "count"]
-        chart = alt.Chart(contagem).mark_bar().encode(
-            x=alt.X("uf:N", sort="-y", title="Estado (UF)"),
-            y=alt.Y("count:Q", title="Número de deputados"),
-            tooltip=["uf", "count"]
-        )
-        st.altair_chart(chart, use_container_width=True)
-    else:
-        st.info("A coluna 'uf' não foi encontrada no CSV.")
 
-    # Exemplo adicional: deputados por partido (se existir coluna)
-    if "partido" in df.columns:
-        st.subheader("Número de deputados por partido")
-        cont_p = df["partido"].value_counts().reset_index()
-        cont_p.columns = ["partido", "count"]
-        chart_p = alt.Chart(cont_p).mark_bar().encode(
-            x=alt.X("partido:N", sort="-y", title="Partido"),
-            y=alt.Y("count:Q", title="Número de deputados"),
-            tooltip=["partido", "count"]
+    contagem = df.groupby(coluna_partido).size().reset_index(name="Quantidade")
+
+    contagem = contagem.sort_values("Quantidade", ascending=False)
+
+    chart = (
+        alt.Chart(contagem)
+        .mark_bar()
+        .encode(
+            x=alt.X("Quantidade:Q", title="Número de Deputados"),
+            y=alt.Y(f"{coluna_partido}:N", sort='-x', title="Partido"),
+            tooltip=[coluna_partido, "Quantidade"]
         )
-        st.altair_chart(chart_p, use_container_width=True)
+        .properties(
+            width=700,
+            height=400,
+            title="Número de Deputados por Partido (2022)"
+        )
+    )
+
+    st.altair_chart(chart, use_container_width=True)
 
 if __name__ == "__main__":
     main()
