@@ -13,12 +13,8 @@ def main():
     csv_url = "https://www.irdx.com.br/media/uploads/deputados_2022.csv"
     try:
         df = load_data(csv_url)
-    except Exception as e:
-        st.error(f"Não foi possível carregar os dados: {e}")
+
         return
-
-
-    # Exemplo de gráfico: número de deputados por estado
     if "uf" in df.columns:
         st.subheader("Número de deputados por estado (UF)")
         contagem = df["uf"].value_counts().reset_index()
