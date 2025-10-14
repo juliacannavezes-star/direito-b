@@ -2,71 +2,43 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Deputados 2022", layout="wide")
+# Título do app
+st.title("📊 Análise Interativa - Deputados 2022")
 
-# --- TÍTULO ---
-st.title("📊 Análise Interativa dos Deputados Federais 2022")
-
-# --- CARREGAMENTO DOS DADOS ---
+# Carregar os dados
 @st.cache_data
 def carregar_dados():
-    df = pd.read_csv("media/uploads/deputados_2022.csv", sep=",", encoding="utf-8")
-    return df
+    return pd.read_csv("media/uploads/deputados_2022.csv")
 
 df = carregar_dados()
 
-st.subheader("Visualização inicial dos dados")
-st.dataframe(df.head())
+# Mostrar a tabela completa
+st.subheader("Visualização da Tabela Completa")
+st.dataframe(df)
 
-# --- FILTROS INTERATIVOS ---
-st.sidebar.header("🔍 Filtros")
+# Filtro interativo (por exemplo, partido, estado ou nome, conforme existam no CSV)
+colunas = df.columns.tolist()
+coluna_filtro = st.selectbox("Escolha uma coluna para filtrar:", colunas)
+valores_unicos = df[coluna_filtro].unique()
+valor_escolhido = st.selectbox("Escolha um valor:", valores_unicos)
 
-partidos = st.sidebar.multiselect(
-    "Selecione o(s) Partido(s):", 
-    options=sorted(df["partido"].dropna().unique()),
-    default=[]
-)
+# Aplicar filtro
+df_filtrado = df[df[coluna_filtro] == valor_escolhido]
 
-estados = st.sidebar.multiselect(
-    "Selecione o(s) Estado(s):",
-    options=sorted(df["estado"].dropna().unique()),
-    default=[]
-)
-
-# --- APLICAÇÃO DOS FILTROS ---
-df_filtrado = df.copy()
-
-if partidos:
-    df_filtrado = df_filtrado[df_filtrado["partido"].isin(partidos)]
-
-if estados:
-    df_filtrado = df_filtrado[df_filtrado["estado"].isin(estados)]
-
-st.write(f"Mostrando **{len(df_filtrado)}** deputados após filtragem.")
+st.subheader("Tabela Filtrada")
 st.dataframe(df_filtrado)
 
-# --- GRÁFICOS ---
-st.subheader("📈 Gráficos Interativos")
+# Gráfico simples (exemplo: contar ocorrências de uma coluna)
+st.subheader("📈 Gráfico de Distribuição")
+coluna_grafico = st.selectbox("Escolha uma coluna para visualizar:", colunas)
 
-col1, col2 = st.columns(2)
+fig, ax = plt.subplots()
+df[coluna_grafico].value_counts().head(10).plot(kind="bar", ax=ax)
+ax.set_title(f"Distribuição dos 10 principais valores em '{coluna_grafico}'")
+ax.set_xlabel(coluna_grafico)
+ax.set_ylabel("Frequência")
 
-with col1:
-    st.write("### Distribuição por Partido")
-    fig1, ax1 = plt.subplots()
-    df_filtrado["partido"].value_counts().plot(kind="bar", ax=ax1)
-    ax1.set_xlabel("Partido")
-    ax1.set_ylabel("Número de Deputados")
-    st.pyplot(fig1)
+st.pyplot(fig)
 
-with col2:
-    st.write("### Distribuição por Estado")
-    fig2, ax2 = plt.subplots()
-    df_filtrado["estado"].value_counts().plot(kind="bar", ax=ax2, color="orange")
-    ax2.set_xlabel("Estado")
-    ax2.set_ylabel("Número de Deputados")
-    st.pyplot(fig2)
-
-# --- INFORMAÇÕES ADICIONAIS ---
-st.markdown("---")
-st.caption("Desenvolvido com ❤️ usando Streamlit e Pandas.")
+# Rodapé
+st.caption("Desenvolvido com ❤️ usando Streamlit e Pandas")
