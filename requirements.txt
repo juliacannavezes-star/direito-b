@@ -2,9 +2,7 @@ streamlit[charts]
 streamlit
 pandas
 altair
-leis-por-graficos/
-│
-├── app.py
-├── requirements.txt
-└── README.md
+app.py
+requirements.txt
+README.md
 
