@@ -2,7 +2,5 @@ streamlit[charts]
 streamlit
 pandas
 altair
-app.py
-requirements.txt
-README.md
+
 
