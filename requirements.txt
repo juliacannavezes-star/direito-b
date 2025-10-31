@@ -2,5 +2,8 @@ streamlit[charts]
 streamlit
 pandas
 altair
-
+streamlit
+beautifulsoup4
+pandas
+plotly
 
