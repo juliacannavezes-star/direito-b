@@ -6,4 +6,10 @@ streamlit
 beautifulsoup4
 pandas
 plotly
+streamlit
+pandas
+requests
+tabula-py   # requer Java instalado
+pdfplumber
+plotly
 
