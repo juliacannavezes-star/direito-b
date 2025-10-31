@@ -1,77 +1,137 @@
-import streamlit as st
+import os
+import io
+import requests
 import pandas as pd
-import plotly.express as px
 
-st.set_page_config(page_title="Leis Explicadas por Gráficos", page_icon="⚖️", layout="centered")
+def download_pdf(url: str, dest_path: str):
+    """Baixa o PDF para dest_path (sobrescreve se existir)."""
+    resp = requests.get(url, stream=True, timeout=30)
+    resp.raise_for_status()
+    with open(dest_path, "wb") as f:
+        for chunk in resp.iter_content(1024):
+            f.write(chunk)
+    return dest_path
 
-# Título e introdução
-st.title("⚖️ Leis Explicadas por Gráficos")
-st.write("""
-Este aplicativo interativo mostra **estatísticas e impactos simulados** de algumas leis brasileiras importantes.
-Escolha uma lei abaixo e explore os gráficos 📊
-""")
+def try_tabula_extract(pdf_path: str, pages: str):
+    """
+    Tenta extrair tabelas com tabula-py.
+    pages: string no formato '12-15' ou '12' ou '12,13'
+    Retorna um DataFrame (concat de todas as tabelas extraídas)
+    """
+    try:
+        import tabula
+        # retorna lista de dfs
+        dfs = tabula.read_pdf(pdf_path, pages=pages, multiple_tables=True, lattice=True)
+        if not dfs:
+            return None
+        # concat careful (some tables may be header/footer)
+        df = pd.concat(dfs, ignore_index=True)
+        return df
+    except Exception as e:
+        print("tabula failed:", e)
+        return None
 
-# Leis disponíveis
-leis = {
-    "Lei Maria da Penha (11.340/2006)": "Protege mulheres contra a violência doméstica.",
-    "Lei de Acesso à Informação (12.527/2011)": "Garante o direito de acesso a informações públicas.",
-    "Lei Anticorrupção (12.846/2013)": "Responsabiliza empresas por atos de corrupção.",
-    "Marco Civil da Internet (12.965/2014)": "Regula o uso da internet no Brasil.",
-    "Lei Geral de Proteção de Dados - LGPD (13.709/2018)": "Protege dados pessoais e privacidade."
-}
+def pdfplumber_extract(pdf_path: str, pages: list):
+    """
+    Extrai tabelas usando pdfplumber como fallback.
+    pages: lista de 1-based page numbers (ex: [12,13])
+    Retorna DataFrame concatenado.
+    """
+    import pdfplumber
+    import pandas as pd
+    tables = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for p in pages:
+            page_index = p - 1
+            if page_index < 0 or page_index >= len(pdf.pages):
+                continue
+            page = pdf.pages[page_index]
+            # tenta extrair tabelas detectadas
+            page_tables = page.extract_tables()
+            for t in page_tables:
+                df = pd.DataFrame(t[1:], columns=t[0])
+                tables.append(df)
+    if not tables:
+        return None
+    df = pd.concat(tables, ignore_index=True)
+    return df
 
-lei_escolhida = st.selectbox("📜 Escolha uma lei para visualizar:", list(leis.keys()))
+def normalize_table(df: pd.DataFrame, col_uf_candidates=None, col_val_candidates=None):
+    """
+    Tenta normalizar DataFrame extraído do PDF para duas colunas:
+    'UF' e 'value' (valor numérico).
+    col_uf_candidates / col_val_candidates: listas de strings com nomes possíveis.
+    """
+    import re
+    df = df.copy()
+    # lower columns
+    cols = {c: c.strip() for c in df.columns}
+    df.rename(columns=cols, inplace=True)
+    # heurística: encontrar coluna com sigla UF (2 letras) e coluna com números
+    uf_col = None
+    val_col = None
+    # candidates provided?
+    if col_uf_candidates:
+        for c in col_uf_candidates:
+            if c in df.columns:
+                uf_col = c
+                break
+    if col_val_candidates:
+        for c in col_val_candidates:
+            if c in df.columns:
+                val_col = c
+                break
 
-st.info(leis[lei_escolhida])
+    # fallback heuristics
+    if uf_col is None:
+        # buscar coluna com valores que parecem siglas (2 letras ou nomes de estados)
+        for c in df.columns:
+            sample = df[c].astype(str).str.strip().head(10).tolist()
+            if all((len(s) <= 3 and s.isalpha()) or (s == '') for s in sample):
+                uf_col = c
+                break
+    if val_col is None:
+        # buscar coluna que contenha números (com . e ,)
+        for c in df.columns[::-1]:  # preferir colunas à direita (normalmente valores)
+            sample = df[c].astype(str)
+            if sample.str.contains(r'\d').any():
+                val_col = c
+                break
 
-# Função para gerar dados simulados
-def gerar_dados(lei):
-    if "Maria da Penha" in lei:
-        anos = list(range(2006, 2025))
-        casos = [2000 + i * 500 + (i**1.5)*30 for i in range(len(anos))]
-        prisões = [x * 0.35 for x in casos]
-        return pd.DataFrame({"Ano": anos, "Casos Registrados": casos, "Prisões Efetuadas": prisões})
-    
-    elif "Acesso à Informação" in lei:
-        anos = list(range(2012, 2025))
-        pedidos = [5000 + i * 1200 for i in range(len(anos))]
-        respostas = [p * (0.9 + (i/100)) for i, p in enumerate(pedidos)]
-        return pd.DataFrame({"Ano": anos, "Pedidos de Informação": pedidos, "Respostas Enviadas": respostas})
-    
-    elif "Anticorrupção" in lei:
-        anos = list(range(2013, 2025))
-        processos = [100 + i * 20 + (i**2) for i in range(len(anos))]
-        multas = [p * 3.2 for p in processos]
-        return pd.DataFrame({"Ano": anos, "Processos": processos, "Multas (em milhões R$)": multas})
-    
-    elif "Marco Civil" in lei:
-        anos = list(range(2014, 2025))
-        casos = [50 + i * 30 + (i**2)*2 for i in range(len(anos))]
-        remoções = [c * 0.6 for c in casos]
-        return pd.DataFrame({"Ano": anos, "Casos na Justiça": casos, "Remoções de Conteúdo": remoções})
-    
-    elif "LGPD" in lei:
-        anos = list(range(2018, 2025))
-        denúncias = [100 + i * 400 for i in range(len(anos))]
-        empresas_autuadas = [d * 0.4 for d in denúncias]
-        return pd.DataFrame({"Ano": anos, "Denúncias": denúncias, "Empresas Autuadas": empresas_autuadas})
+    if uf_col is None or val_col is None:
+        # última tentativa: pegar primeiras duas colunas
+        cols_list = list(df.columns)
+        if len(cols_list) >= 2:
+            uf_col = uf_col or cols_list[0]
+            val_col = val_col or cols_list[1]
+        else:
+            raise ValueError("Não foi possível localizar colunas UF/valor na tabela.")
 
-# Gerar dados com base na escolha
-df = gerar_dados(lei_escolhida)
+    # limpar valores e converter números
+    def parse_num(x):
+        if x is None:
+            return None
+        s = str(x).strip()
+        # remover asteriscos e notas
+        s = re.sub(r'[*†].*', '', s)
+        s = s.replace('.', '').replace(',', '.')
+        s = re.sub(r'[^\d\.\-]', '', s)
+        try:
+            if s == '':
+                return None
+            # inteiro
+            if '.' not in s:
+                return int(s)
+            return float(s)
+        except:
+            return None
 
-# Escolha do tipo de gráfico
-tipo_grafico = st.radio("📊 Escolha o tipo de gráfico:", ["Linha", "Barras", "Área"], horizontal=True)
-
-# Mostrar gráfico
-if tipo_grafico == "Linha":
-    fig = px.line(df, x="Ano", y=df.columns[1:], markers=True, title=f"Evolução - {lei_escolhida}")
-elif tipo_grafico == "Barras":
-    fig = px.bar(df, x="Ano", y=df.columns[1:], barmode="group", title=f"Comparativo - {lei_escolhida}")
-else:
-    fig = px.area(df, x="Ano", y=df.columns[1:], title=f"Tendência - {lei_escolhida}")
-
-st.plotly_chart(fig, use_container_width=True)
-
-# Rodapé
-st.markdown("---")
-st.caption("Feito com ❤️ e Streamlit • Projeto educacional • Dados simulados para fins ilustrativos")
+    out = pd.DataFrame()
+    out['UF'] = df[uf_col].astype(str).str.strip()
+    out['value_raw'] = df[val_col].astype(str).apply(parse_num)
+    # drop rows without UF or value
+    out = out[~out['UF'].str.strip().isin(['', 'UF', ''])].copy()
+    out = out[~out['value_raw'].isnull()].copy()
+    out = out.drop_duplicates(subset=['UF'])
+    out = out.reset_index(drop=True)
+    return out.rename(columns={'value_raw': 'value'})
